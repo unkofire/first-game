@@ -5,25 +5,26 @@ using UnityEngine;
 public class PlayerControl : MonoBehaviour
 {
     // private Rigidbody RB;
-    public float speed;
-    public float height;
-    private bool isGrounded = false;
-    public Transform camTarget;
-    public float maxAngle = 60;
-    private Vector3 playerStartPosition;
+    public float speed; // speed of player
+    public float height; // height of jump 
+    private bool isGrounded = false; // is the player on the ground currently? 
+    public Transform camTarget; // where the camera faces/follows (player) 
+    public float maxAngle = 60; // the max that a person can look (up and down). 
+    private Vector3 playerStartPosition; // where the player first psawns 
     private Vector3 velocity; // keeps track of front and backwards movement
     private float yVelocity; // keeps track of up and down movement
-    private CharacterController player;
-    public Transform groundCheck;
-    public float groundCheckRadius = 0.2f;
-    public LayerMask groundMask;
-    public float gravityMult = 1f;
-    private bool onCoyoteTime = false;
-    public float maxCoyoteTime = 0.5f;
-    private bool jumpInput = false;
-    public float jumpBufferTime = 0.5f;
-    private Coroutine jumpCoroutine;
-    private bool groundedLastFrame = false; 
+    private CharacterController player; 
+    public Transform groundCheck; // checks if the player's feet is on the ground 
+    public float groundCheckRadius = 0.2f; // the radius of ground check (size) 
+    public LayerMask groundMask; // what layers count as the ground 
+    public float gravityMult = 1f; // how much gravity affects jump and fall 
+    private bool onCoyoteTime = false; // if player just walked off a ledge
+    public float maxCoyoteTime = 0.5f; // max time that the player can air jump after walking off ledge
+    private bool jumpInput = false; // if jump was pressed
+    public float jumpBufferTime = 0.5f; // amount of time between player jump and the ground, valid for another jump 
+    private Coroutine jumpCoroutine; // sets jump imput on a timer
+    private Coroutine coyoteCoroutine; // sets coyote time 
+    private bool groundedLastFrame = false; // if the player was on the ground in the previous frame 
     // Start is called before the first frame update
     void Start()
     {
@@ -130,13 +131,27 @@ public class PlayerControl : MonoBehaviour
 
         if (groundedLastFrame && !isGrounded && !onCoyoteTime) // when you walk off of a ledge 
         {
-            StartCoroutine(coyoteTime());
+            coyoteCoroutine = StartCoroutine(coyoteTime());
         }
 
 
-        if (jumpInput && canJump) 
+        if (jumpInput && canJump) // JUMP 
         {
             //  RB.AddForce(new Vector3(0, height, 0), ForceMode.Impulse);
+           
+            if (jumpCoroutine != null) // if running 
+            {
+                StopCoroutine(jumpCoroutine);
+                jumpInput = false; 
+            }
+
+            if (coyoteCoroutine != null)
+            {
+                StopCoroutine(coyoteCoroutine);
+                onCoyoteTime = false;
+                yVelocity = 0; // stops us from falling so we can do the full jump
+            }
+
             yVelocity += Mathf.Sqrt(height * -3 * Physics.gravity.y * gravityMult); // take current gravity force and multiply it by -3 to counter gravity so you actually jump 
             isGrounded = false; // prevents coyoteTime from activating during a jump 
         }
@@ -161,20 +176,20 @@ public class PlayerControl : MonoBehaviour
 
     }
 
-    private void OnDrawGizmos()
+    private void OnDrawGizmos() // allows us to see the ground check in unity as a blue sphere. 
     {
         Gizmos.color = Color.blue;
         Gizmos.DrawSphere(groundCheck.position, groundCheckRadius);
     }
 
-    private IEnumerator coyoteTime()
+    private IEnumerator coyoteTime() // starts coyote time NOTE: IEnumerator is saved in a coroutine so you can stop the coroutine
     {
         onCoyoteTime = true; 
         yield return new WaitForSeconds(maxCoyoteTime); // wait until x amount of time has passed 
         onCoyoteTime = false; 
     }
 
-    private IEnumerator jumpBuffer()
+    private IEnumerator jumpBuffer() // starts time for jump input. 
     {
         jumpInput = true;
         yield return new WaitForSeconds(jumpBufferTime);
