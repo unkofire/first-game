@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
 public class PlayerControl : MonoBehaviour
 {
     // private Rigidbody RB;
@@ -25,6 +26,9 @@ public class PlayerControl : MonoBehaviour
     private Coroutine jumpCoroutine; // sets jump imput on a timer
     private Coroutine coyoteCoroutine; // sets coyote time 
     private bool groundedLastFrame = false; // if the player was on the ground in the previous frame 
+    public Animator anim;
+    public float animBlendSpeed = 0; 
+
     // Start is called before the first frame update
     void Start()
     {
@@ -71,6 +75,7 @@ public class PlayerControl : MonoBehaviour
             // RB.AddForce(camTarget.forward * speed); THIS IS PURE PHYSICS FOR IF YOU WANT TO MAKE A PHYSICS BASED GAME
             z += 1;
 
+
         }
 
         if (Input.GetKey(KeyCode.A))
@@ -90,6 +95,28 @@ public class PlayerControl : MonoBehaviour
             // RB.AddForce(camTarget.right * speed); // updates with camera rotation 
             x += 1;
         }
+
+       // anim.SetFloat("right and left", x);
+       // anim.SetFloat("fwd and bkwd", z); 
+       if (anim.GetFloat("right and left") < x)
+        {
+            anim.SetFloat("right and left", anim.GetFloat("right and left") + animBlendSpeed * Time.deltaTime); 
+        }
+        else if (anim.GetFloat("right and left") > x)
+        {
+            anim.SetFloat("right and left", anim.GetFloat("right and left") - animBlendSpeed * Time.deltaTime);
+        }
+
+
+        if (anim.GetFloat("fwd and bkwd") < z)
+        {
+            anim.SetFloat("fwd and bkwd", anim.GetFloat("fwd and bkwd") + animBlendSpeed * Time.deltaTime);
+        }
+        else if (anim.GetFloat("fwd and bkwd") > z)
+        {
+            anim.SetFloat("fwd and bkwd", anim.GetFloat("fwd and bkwd") - animBlendSpeed * Time.deltaTime);
+        }
+
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -123,6 +150,7 @@ public class PlayerControl : MonoBehaviour
         groundedLastFrame = isGrounded; 
 
         isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask);
+        anim.SetBool("grounded", isGrounded);
         bool canJump = isGrounded || onCoyoteTime; 
         if (isGrounded && yVelocity < 0) // if you are on the ground and the velocity is increasing 
         {
