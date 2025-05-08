@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 public class TitleScript : MonoBehaviour
 {
     // Start is called before the first frame update
@@ -18,8 +18,12 @@ public class TitleScript : MonoBehaviour
 
     public void startGame()
     {
-        int currentBuildIndex = SceneManager.GetActiveScene().buildIndex;
-        currentBuildIndex += 1;
-        SceneManager.LoadScene(currentBuildIndex);
+        SceneManager.LoadScene(1);
+        
+    }
+
+    public void quitGame()
+    {
+        Application.Quit();
     }
 }
