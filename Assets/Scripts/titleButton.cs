@@ -18,7 +18,7 @@ public class titleButton : MonoBehaviour
         
     }
 
-    void OnMouseEnter()
+    /* void OnMouseEnter()
     {
         print("mouse Enter");
         handImage.SetActive(true);
@@ -29,5 +29,8 @@ public class titleButton : MonoBehaviour
     {
         print("mouse Exit");
         handImage.SetActive(false);
-    }
+    } */
+
+
+
 }
