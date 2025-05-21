@@ -96,27 +96,38 @@ public class PlayerControl : MonoBehaviour
             x += 1;
         }
 
-       // anim.SetFloat("right and left", x);
-       // anim.SetFloat("fwd and bkwd", z); 
-       if (anim.GetFloat("right and left") < x)
+
+
+        // anim.SetFloat("right and left", x);
+        // anim.SetFloat("fwd and bkwd", z); 
+        float animX = (anim.GetFloat("right and left"));
+        float animZ = (anim.GetFloat("fwd and bkwd"));
+       if (animX < x)
         {
-            anim.SetFloat("right and left", anim.GetFloat("right and left") + animBlendSpeed * Time.deltaTime); 
+            anim.SetFloat("right and left", animX + animBlendSpeed * Time.deltaTime); 
         }
-        else if (anim.GetFloat("right and left") > x)
+        else if (animX > x)
         {
-            anim.SetFloat("right and left", anim.GetFloat("right and left") - animBlendSpeed * Time.deltaTime);
+            anim.SetFloat("right and left", animX - animBlendSpeed * Time.deltaTime);
+        }
+       if (Mathf.Abs(animX - x) < 0.1 && x == 0)
+        {
+            anim.SetFloat("right and left", 0f);
         }
 
 
-        if (anim.GetFloat("fwd and bkwd") < z)
+        if (animZ < z)
         {
-            anim.SetFloat("fwd and bkwd", anim.GetFloat("fwd and bkwd") + animBlendSpeed * Time.deltaTime);
+            anim.SetFloat("fwd and bkwd", animZ + animBlendSpeed * Time.deltaTime);
         }
-        else if (anim.GetFloat("fwd and bkwd") > z)
+        else if (animZ > z)
         {
-            anim.SetFloat("fwd and bkwd", anim.GetFloat("fwd and bkwd") - animBlendSpeed * Time.deltaTime);
+            anim.SetFloat("fwd and bkwd", animZ - animBlendSpeed * Time.deltaTime);
         }
-
+        if (Mathf.Abs(animZ - z) < 0.1 && z == 0)
+        {
+            anim.SetFloat("fwd and bkwd", 0f);
+        }
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
