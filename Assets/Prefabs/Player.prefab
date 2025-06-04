@@ -113,6 +113,8 @@ MonoBehaviour:
   jumpBufferTime: 0.5
   anim: {fileID: 508899768}
   animBlendSpeed: 10
+  jumpSFX: {fileID: 8300000, guid: 79c3331b62e23644fbd82088b18f75d9, type: 3}
+  footstepSFX: {fileID: 8300000, guid: 00db6001b178f5246aeba2eac9e9be51, type: 3}
 --- !u!143 &1267881709843168125
 CharacterController:
   m_ObjectHideFlags: 0

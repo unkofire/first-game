@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 
 
 public class PlayerControl : MonoBehaviour
@@ -27,7 +28,11 @@ public class PlayerControl : MonoBehaviour
     private Coroutine coyoteCoroutine; // sets coyote time 
     private bool groundedLastFrame = false; // if the player was on the ground in the previous frame 
     public Animator anim;
-    public float animBlendSpeed = 0; 
+    public float animBlendSpeed = 0;
+    public AudioClip jumpSFX;
+    public AudioClip footstepSFX;
+    private AudioSource audioSource; 
+
 
     // Start is called before the first frame update
     void Start()
@@ -37,7 +42,8 @@ public class PlayerControl : MonoBehaviour
         player = GetComponent<CharacterController>();
         Cursor.visible = false; // cursor not visible 
         Cursor.lockState = CursorLockMode.Locked; // keeps cursors in the middle of the screen
-
+        audioSource = GetComponent<AudioSource>();
+       
     }
 
     // Update is called once per frame
@@ -97,39 +103,44 @@ public class PlayerControl : MonoBehaviour
         }
 
 
+        #endregion
 
-        // anim.SetFloat("right and left", x);
-        // anim.SetFloat("fwd and bkwd", z); 
+        #region Animations
+        //NOTE: This is for blending: aka, this makes the animations transition from one to another without snapping
         float animX = (anim.GetFloat("right and left"));
         float animZ = (anim.GetFloat("fwd and bkwd"));
-       if (animX < x)
+       if (animX < x) // if we are trying to walk right, and we were walking left
         {
             anim.SetFloat("right and left", animX + animBlendSpeed * Time.deltaTime); 
         }
-        else if (animX > x)
+        else if (animX > x) // if we are trying to walk left, and we were walking right
         {
             anim.SetFloat("right and left", animX - animBlendSpeed * Time.deltaTime);
         }
-       if (Mathf.Abs(animX - x) < 0.1 && x == 0)
+       if (Mathf.Abs(animX - x) < 0.1 && x == 0) // Fixes the weird jittering problem. 
         {
             anim.SetFloat("right and left", 0f);
         }
 
 
-        if (animZ < z)
+        if (animZ < z) // if we are trying to walk forward, and we were walking backwards
         {
             anim.SetFloat("fwd and bkwd", animZ + animBlendSpeed * Time.deltaTime);
         }
-        else if (animZ > z)
+        else if (animZ > z) // if we are trying to walk backwards, and we were walking forwards
         {
             anim.SetFloat("fwd and bkwd", animZ - animBlendSpeed * Time.deltaTime);
         }
-        if (Mathf.Abs(animZ - z) < 0.1 && z == 0)
+        if (Mathf.Abs(animZ - z) < 0.1 && z == 0) // prevents jittering 
         {
             anim.SetFloat("fwd and bkwd", 0f);
         }
+        #endregion
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        #region input physics
+
+        // Jump detection
+        if (Input.GetKeyDown(KeyCode.Space)) 
         {
             if (jumpCoroutine != null) // if jumpCoroutine is playing already
             {
@@ -139,6 +150,8 @@ public class PlayerControl : MonoBehaviour
 
         }
 
+
+        //forwards and backwards physics
         velocity = new Vector3(x, 0, z);
 
         if (velocity.magnitude > 0f) // if the player is trying to move
@@ -157,7 +170,8 @@ public class PlayerControl : MonoBehaviour
         #endregion
 
 
-        #region up and down movement
+        #region up and down movement (jumping & falling) 
+
         groundedLastFrame = isGrounded; 
 
         isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask);
@@ -176,7 +190,6 @@ public class PlayerControl : MonoBehaviour
 
         if (jumpInput && canJump) // JUMP 
         {
-            //  RB.AddForce(new Vector3(0, height, 0), ForceMode.Impulse);
            
             if (jumpCoroutine != null) // if running 
             {
@@ -190,8 +203,9 @@ public class PlayerControl : MonoBehaviour
                 onCoyoteTime = false;
                 yVelocity = 0; // stops us from falling so we can do the full jump
             }
-
-            yVelocity += Mathf.Sqrt(height * -3 * Physics.gravity.y * gravityMult); // take current gravity force and multiply it by -3 to counter gravity so you actually jump 
+            audioSource.clip = jumpSFX;
+            audioSource.Play();
+            yVelocity += Mathf.Sqrt(height * -3 * Physics.gravity.y * gravityMult); // take current gravity force and multiply it by -3 to counter gravity so you ACTUALLY JUMP
             isGrounded = false; // prevents coyoteTime from activating during a jump 
         }
 
@@ -233,5 +247,11 @@ public class PlayerControl : MonoBehaviour
         jumpInput = true;
         yield return new WaitForSeconds(jumpBufferTime);
         jumpInput = false; 
+    }
+
+    public void playFootstep()
+    {
+        audioSource.clip = footstepSFX;
+        audioSource.Play(); 
     }
 }
