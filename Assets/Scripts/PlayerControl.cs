@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 
+// NOTE: PUBLIC variables can have their values edited on unity, PRIVATE cannot. 
 
 public class PlayerControl : MonoBehaviour
 {
@@ -27,7 +28,7 @@ public class PlayerControl : MonoBehaviour
     private Coroutine jumpCoroutine; // sets jump imput on a timer
     private Coroutine coyoteCoroutine; // sets coyote time 
     private bool groundedLastFrame = false; // if the player was on the ground in the previous frame 
-    public Animator anim;
+    public Animator anim; // animator control of the player
     public float animBlendSpeed = 0;
     public AudioClip jumpSFX;
     public AudioClip footstepSFX;
@@ -172,9 +173,10 @@ public class PlayerControl : MonoBehaviour
 
         #region up and down movement (jumping & falling) 
 
-        groundedLastFrame = isGrounded; 
+        groundedLastFrame = isGrounded;  // groundedLastFrame checks isGrounded for the previous frame before isGrounded updates for the current frame. 
 
-        isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask);
+        isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask); // checks if the player is on the ground by seeing if the position and radius of the blue sphere...
+                                                                                               // ...is on an object in the ground layer (groundMask)
         anim.SetBool("grounded", isGrounded);
         bool canJump = isGrounded || onCoyoteTime; 
         if (isGrounded && yVelocity < 0) // if you are on the ground and the velocity is increasing 
