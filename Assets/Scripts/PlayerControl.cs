@@ -25,11 +25,13 @@ public class PlayerControl : MonoBehaviour
     public float maxCoyoteTime = 0.5f; // max time that the player can air jump after walking off ledge
     private bool jumpInput = false; // if jump was pressed
     public float jumpBufferTime = 0.5f; // amount of time between player jump and the ground, valid for another jump 
-    private Coroutine jumpCoroutine; // sets jump imput on a timer
+    private Coroutine jumpCoroutine; // sets jump imput on a timer (how long the jump input is valid for before you have to press space again) If player lands within 0.5 seconds, then they automatically jump.
     private Coroutine coyoteCoroutine; // sets coyote time 
     private bool groundedLastFrame = false; // if the player was on the ground in the previous frame 
     public Animator anim; // animator control of the player
-    public float animBlendSpeed = 0;
+    public int maxAirJumpCount = 2; // how many times you can jump in the air
+    private int jumpCount = 0; // actual jump count
+    public float animBlendSpeed = 0; //How fast animation transitions from one animations to the next.
     public AudioClip jumpSFX;
     public AudioClip footstepSFX;
     private AudioSource audioSource; 
@@ -44,6 +46,7 @@ public class PlayerControl : MonoBehaviour
         Cursor.visible = false; // cursor not visible 
         Cursor.lockState = CursorLockMode.Locked; // keeps cursors in the middle of the screen
         audioSource = GetComponent<AudioSource>();
+        jumpCount = maxAirJumpCount; 
        
     }
 
@@ -143,9 +146,9 @@ public class PlayerControl : MonoBehaviour
         // Jump detection
         if (Input.GetKeyDown(KeyCode.Space)) 
         {
-            if (jumpCoroutine != null) // if jumpCoroutine is playing already
+            if (jumpCoroutine != null) // if jumpCoroutine buffer time is already playing 
             {
-                StopCoroutine(jumpCoroutine);
+                StopCoroutine(jumpCoroutine); // reset jump buffer to prevent the player from jumping again within 0.5 seconds
             }
             jumpCoroutine = StartCoroutine(jumpBuffer()); // If a player is approaching the ground and pressed space, the input is saved, and so the character jumps right away when they hit the ground. 
 
@@ -176,9 +179,13 @@ public class PlayerControl : MonoBehaviour
         groundedLastFrame = isGrounded;  // groundedLastFrame checks isGrounded for the previous frame before isGrounded updates for the current frame. 
 
         isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundMask); // checks if the player is on the ground by seeing if the position and radius of the blue sphere...
-                                                                                               // ...is on an object in the ground layer (groundMask)
+                                                                                      // ...is on an object in the ground layer (groundMask)
+        if (isGrounded) // if grounded
+        {
+            jumpCount = maxAirJumpCount; // reset jump count 
+        }
         anim.SetBool("grounded", isGrounded);
-        bool canJump = isGrounded || onCoyoteTime; 
+        bool canJump = isGrounded || onCoyoteTime || jumpCount > 0; 
         if (isGrounded && yVelocity < 0) // if you are on the ground and the velocity is increasing 
         {
             yVelocity = 0; // reset velocity so it doesn't increase when you are not in the air 
@@ -190,24 +197,29 @@ public class PlayerControl : MonoBehaviour
         }
 
 
-        if (jumpInput && canJump) // JUMP 
+        if (canJump && jumpInput) // If you can jump, and you are pressing space
         {
-           
-            if (jumpCoroutine != null) // if running 
+
+            if (jumpCoroutine != null) // if buffer is active 
             {
-                StopCoroutine(jumpCoroutine);
-                jumpInput = false; 
+                StopCoroutine(jumpCoroutine); // clean up the buffer so the jump finishes completely without auto jumping if a player lands too early. 
+                jumpInput = false;
             }
 
-            if (coyoteCoroutine != null)
+            if (coyoteCoroutine != null) // if coyote timer is already active
             {
-                StopCoroutine(coyoteCoroutine);
+                StopCoroutine(coyoteCoroutine); // Stop coroutine so coyotetime is no longer active (prevents player from jumping into infinity) 
                 onCoyoteTime = false;
                 yVelocity = 0; // stops us from falling so we can do the full jump
             }
             audioSource.clip = jumpSFX;
             audioSource.Play();
-            yVelocity += Mathf.Sqrt(height * -3 * Physics.gravity.y * gravityMult); // take current gravity force and multiply it by -3 to counter gravity so you ACTUALLY JUMP
+            if (!isGrounded) // if the player is already in the air
+            {
+                jumpCount--;
+                yVelocity = 0; //ignore gravity to do a full jump
+            }
+            yVelocity += Mathf.Sqrt(height * -3 * Physics.gravity.y * gravityMult); // take current gravity force and multiply it by -3 to counter gravity so you ACTUALLY JUMP and fall
             isGrounded = false; // prevents coyoteTime from activating during a jump 
         }
 
