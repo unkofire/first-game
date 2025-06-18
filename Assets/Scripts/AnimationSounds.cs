@@ -33,6 +33,6 @@ public class AnimationSounds : MonoBehaviour
 
     public void FootstepSound()
     {
-        player.playFootstep(); 
+      //  player.playFootstep(); 
     }
 }

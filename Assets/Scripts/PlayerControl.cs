@@ -4,7 +4,9 @@ using UnityEngine;
 using UnityEngine.Audio;
 
 // NOTE: PUBLIC variables can have their values edited on unity, PRIVATE cannot. 
-
+[RequireComponent(typeof(AnimationController))]
+[RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(AudioSource))]
 public class PlayerControl : MonoBehaviour
 {
     // private Rigidbody RB;
@@ -28,13 +30,14 @@ public class PlayerControl : MonoBehaviour
     private Coroutine jumpCoroutine; // sets jump imput on a timer (how long the jump input is valid for before you have to press space again) If player lands within 0.5 seconds, then they automatically jump.
     private Coroutine coyoteCoroutine; // sets coyote time 
     private bool groundedLastFrame = false; // if the player was on the ground in the previous frame 
-    public Animator anim; // animator control of the player
     public int maxAirJumpCount = 2; // how many times you can jump in the air
     private int jumpCount = 0; // actual jump count
-    public float animBlendSpeed = 0; //How fast animation transitions from one animations to the next.
     public AudioClip jumpSFX;
     public AudioClip footstepSFX;
-    private AudioSource audioSource; 
+    private AudioSource audioSource;
+    private AnimationController _animControl;
+    private int x = 0;
+    private int z = 0; 
 
 
     // Start is called before the first frame update
@@ -46,100 +49,21 @@ public class PlayerControl : MonoBehaviour
         Cursor.visible = false; // cursor not visible 
         Cursor.lockState = CursorLockMode.Locked; // keeps cursors in the middle of the screen
         audioSource = GetComponent<AudioSource>();
-        jumpCount = maxAirJumpCount; 
+        jumpCount = maxAirJumpCount;
+        _animControl = GetComponent<AnimationController>();
        
     }
 
     // Update is called once per frame
     void Update()
     {
-        #region Camera Controls
-        camTarget.position = this.transform.position; // cam target position follows player positions
+        _CameraControls();
 
-        if (Input.GetMouseButton(1)) // left click = 0, right click = 1, scroll = 2
-        {
-            float mouseMovementX = Input.GetAxis("Mouse X"); // right and left. -1 is left, 1 is right 
-            float mouseMovementY = -Input.GetAxis("Mouse Y"); // up and down. -1 is down, 1 is up 
-            camTarget.rotation *= Quaternion.AngleAxis(mouseMovementX, Vector3.up); // Vector3.up is the Y axis  
-            if ((mouseMovementY > 0) && ((camTarget.eulerAngles.x + mouseMovementY) > maxAngle) && (camTarget.eulerAngles.x <= 180)) // Are we looking up and are we above our max? 
-            {
-                camTarget.rotation = Quaternion.Euler(maxAngle, camTarget.eulerAngles.y, 0);
-            }
-            else if ((mouseMovementY < 0) && ((camTarget.eulerAngles.x + mouseMovementY) < 360 - maxAngle) && (camTarget.eulerAngles.x > 180)) // Are we looking down and are we at our max? 
-            {
-                camTarget.rotation = Quaternion.Euler(360 - maxAngle, camTarget.eulerAngles.y, 0);
-            }
-            else
-            {
-                camTarget.rotation *= Quaternion.AngleAxis(mouseMovementY, Vector3.right); // Vector3.right is the X axis  
-            }
-            camTarget.rotation = Quaternion.Euler(camTarget.eulerAngles.x, camTarget.eulerAngles.y, 0);
-        }
-        #endregion
+        _PlayerInputMapping();
+        
 
-        #region Inputs
-        int x = 0; // 1 is right, left is -1
-        int z = 0; // 1 forward, -1 backward
-        if (Input.GetKey(KeyCode.W))
-        {
-            // RB.AddForce(camTarget.forward * speed); THIS IS PURE PHYSICS FOR IF YOU WANT TO MAKE A PHYSICS BASED GAME
-            z += 1;
-
-
-        }
-
-        if (Input.GetKey(KeyCode.A))
-        {
-            //  RB.AddForce(camTarget.right * -speed);
-            x -= 1;
-        }
-
-        if (Input.GetKey(KeyCode.S))
-        {
-            //RB.AddForce(camTarget.forward * -speed);
-            z -= 1;
-        }
-
-        if (Input.GetKey(KeyCode.D))    // True if key is held 
-        {
-            // RB.AddForce(camTarget.right * speed); // updates with camera rotation 
-            x += 1;
-        }
-
-
-        #endregion
-
-        #region Animations
-        //NOTE: This is for blending: aka, this makes the animations transition from one to another without snapping
-        float animX = (anim.GetFloat("right and left"));
-        float animZ = (anim.GetFloat("fwd and bkwd"));
-       if (animX < x) // if we are trying to walk right, and we were walking left
-        {
-            anim.SetFloat("right and left", animX + animBlendSpeed * Time.deltaTime); 
-        }
-        else if (animX > x) // if we are trying to walk left, and we were walking right
-        {
-            anim.SetFloat("right and left", animX - animBlendSpeed * Time.deltaTime);
-        }
-       if (Mathf.Abs(animX - x) < 0.1 && x == 0) // Fixes the weird jittering problem. 
-        {
-            anim.SetFloat("right and left", 0f);
-        }
-
-
-        if (animZ < z) // if we are trying to walk forward, and we were walking backwards
-        {
-            anim.SetFloat("fwd and bkwd", animZ + animBlendSpeed * Time.deltaTime);
-        }
-        else if (animZ > z) // if we are trying to walk backwards, and we were walking forwards
-        {
-            anim.SetFloat("fwd and bkwd", animZ - animBlendSpeed * Time.deltaTime);
-        }
-        if (Mathf.Abs(animZ - z) < 0.1 && z == 0) // prevents jittering 
-        {
-            anim.SetFloat("fwd and bkwd", 0f);
-        }
-        #endregion
+        _animControl.AnimationUpdate(x, z); 
+       
 
         #region input physics
 
@@ -150,10 +74,9 @@ public class PlayerControl : MonoBehaviour
             {
                 StopCoroutine(jumpCoroutine); // reset jump buffer to prevent the player from jumping again within 0.5 seconds
             }
-            jumpCoroutine = StartCoroutine(jumpBuffer()); // If a player is approaching the ground and pressed space, the input is saved, and so the character jumps right away when they hit the ground. 
+            jumpCoroutine = StartCoroutine(_JumpBuffer()); // If a player is approaching the ground and pressed space, the input is saved, and so the character jumps right away when they hit the ground. 
 
         }
-
 
         //forwards and backwards physics
         velocity = new Vector3(x, 0, z);
@@ -184,7 +107,7 @@ public class PlayerControl : MonoBehaviour
         {
             jumpCount = maxAirJumpCount; // reset jump count 
         }
-        anim.SetBool("grounded", isGrounded);
+        _animControl.UpdateAnimationGrounded(isGrounded);
         bool canJump = isGrounded || onCoyoteTime || jumpCount > 0; 
         if (isGrounded && yVelocity < 0) // if you are on the ground and the velocity is increasing 
         {
@@ -193,7 +116,7 @@ public class PlayerControl : MonoBehaviour
 
         if (groundedLastFrame && !isGrounded && !onCoyoteTime) // when you walk off of a ledge 
         {
-            coyoteCoroutine = StartCoroutine(coyoteTime());
+            coyoteCoroutine = StartCoroutine(_CoyoteTime());
         }
 
 
@@ -220,7 +143,7 @@ public class PlayerControl : MonoBehaviour
                 yVelocity = 0; //ignore gravity to do a full jump
             }
             yVelocity += Mathf.Sqrt(height * -3 * Physics.gravity.y * gravityMult); // take current gravity force and multiply it by -3 to counter gravity so you ACTUALLY JUMP and fall
-            isGrounded = false; // prevents coyoteTime from activating during a jump 
+            isGrounded = false; // prevents _CoyoteTime from activating during a jump 
         }
 
         yVelocity += Physics.gravity.y * Time.deltaTime * gravityMult;
@@ -249,23 +172,90 @@ public class PlayerControl : MonoBehaviour
         Gizmos.DrawSphere(groundCheck.position, groundCheckRadius);
     }
 
-    private IEnumerator coyoteTime() // starts coyote time NOTE: IEnumerator is saved in a coroutine so you can stop the coroutine
+
+
+    private IEnumerator _CoyoteTime() // starts coyote time NOTE: IEnumerator is saved in a coroutine so you can stop the coroutine
     {
         onCoyoteTime = true; 
         yield return new WaitForSeconds(maxCoyoteTime); // wait until x amount of time has passed 
         onCoyoteTime = false; 
     }
 
-    private IEnumerator jumpBuffer() // starts time for jump input. 
+
+
+    private IEnumerator _JumpBuffer() // starts time for jump input. 
     {
         jumpInput = true;
         yield return new WaitForSeconds(jumpBufferTime);
         jumpInput = false; 
     }
 
-    public void playFootstep()
+
+
+    public void PlayFootstep()
     {
         audioSource.clip = footstepSFX;
         audioSource.Play(); 
+    }
+
+
+    // The keybinds for player Controls.
+    private void _PlayerInputMapping()
+    {
+        
+        x = 0; // 1 is right, left is -1
+        z = 0; // 1 forward, -1 backward
+        if (Input.GetKey(KeyCode.W))
+        {
+
+            z += 1;
+
+
+        }
+
+        if (Input.GetKey(KeyCode.A))
+        {
+
+            x -= 1;
+        }
+
+        if (Input.GetKey(KeyCode.S))
+        {
+
+            z -= 1;
+        }
+
+        if (Input.GetKey(KeyCode.D))    // True if key is held 
+        {
+
+            x += 1;
+        }
+
+    }
+
+    // Camera follows the player when they move. 
+    private void _CameraControls()
+    {
+        camTarget.position = this.transform.position; // cam target position follows player positions
+
+        if (Input.GetMouseButton(1)) // left click = 0, right click = 1, scroll = 2
+        {
+            float mouseMovementX = Input.GetAxis("Mouse X"); // right and left. -1 is left, 1 is right 
+            float mouseMovementY = -Input.GetAxis("Mouse Y"); // up and down. -1 is down, 1 is up 
+            camTarget.rotation *= Quaternion.AngleAxis(mouseMovementX, Vector3.up); // Vector3.up is the Y axis  
+            if ((mouseMovementY > 0) && ((camTarget.eulerAngles.x + mouseMovementY) > maxAngle) && (camTarget.eulerAngles.x <= 180)) // Are we looking up and are we above our max? 
+            {
+                camTarget.rotation = Quaternion.Euler(maxAngle, camTarget.eulerAngles.y, 0);
+            }
+            else if ((mouseMovementY < 0) && ((camTarget.eulerAngles.x + mouseMovementY) < 360 - maxAngle) && (camTarget.eulerAngles.x > 180)) // Are we looking down and are we at our max? 
+            {
+                camTarget.rotation = Quaternion.Euler(360 - maxAngle, camTarget.eulerAngles.y, 0);
+            }
+            else
+            {
+                camTarget.rotation *= Quaternion.AngleAxis(mouseMovementY, Vector3.right); // Vector3.right is the X axis  
+            }
+            camTarget.rotation = Quaternion.Euler(camTarget.eulerAngles.x, camTarget.eulerAngles.y, 0);
+        }
     }
 }
